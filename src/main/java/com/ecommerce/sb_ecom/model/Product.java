@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(name = "products")
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -21,6 +22,7 @@ public class Product {
     @NotBlank
     @Size(min=4, message = "Product Name should be a minimum of 4 characters")
     private String productName;
+
     private String image;
 
     @NotBlank
@@ -43,4 +45,8 @@ public class Product {
     @ManyToOne
     @JoinColumn(name="category_id")
     private Category category;
+
+    @ManyToOne
+    @JoinColumn(name="seller_id")
+    private User user;
 }
