@@ -27,7 +27,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="user_id")
-    private Integer userId;
+    private Long userId;
 
     @NotBlank
     @Size(min = 1, max = 50)
@@ -40,7 +40,7 @@ public class User {
     private String email;
 
     @NotBlank
-    @Size(min = 5, max = 50)
+    @Size(min = 5)
     @Column(name="password")
     private String password;
 
