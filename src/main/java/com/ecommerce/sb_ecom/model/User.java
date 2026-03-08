@@ -66,6 +66,11 @@ public class User {
     private List<Address> addresses = new ArrayList<>();
 
     @ToString.Exclude
+    @OneToOne(mappedBy = "user",cascade = {CascadeType.MERGE,CascadeType.PERSIST},orphanRemoval = true)
+    private Cart cart;
+
+
+    @ToString.Exclude
     @OneToMany(mappedBy = "user", cascade = {CascadeType.MERGE,CascadeType.PERSIST},
             orphanRemoval = true)
     private Set<Product> products;
