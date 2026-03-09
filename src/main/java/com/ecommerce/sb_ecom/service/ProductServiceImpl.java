@@ -2,10 +2,13 @@ package com.ecommerce.sb_ecom.service;
 
 import com.ecommerce.sb_ecom.exceptions.APIException;
 import com.ecommerce.sb_ecom.exceptions.ResourceNotFoundException;
+import com.ecommerce.sb_ecom.model.Cart;
 import com.ecommerce.sb_ecom.model.Category;
 import com.ecommerce.sb_ecom.model.Product;
+import com.ecommerce.sb_ecom.payload.CartDTO;
 import com.ecommerce.sb_ecom.payload.ProductDTO;
 import com.ecommerce.sb_ecom.payload.ProductResponse;
+import com.ecommerce.sb_ecom.repositories.CartRepository;
 import com.ecommerce.sb_ecom.repositories.CategoryRepository;
 import com.ecommerce.sb_ecom.repositories.ProductRepository;
 import org.modelmapper.ModelMapper;
@@ -29,6 +32,12 @@ public class ProductServiceImpl implements ProductService{
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private CartRepository  cartRepository;
+
+    @Autowired
+    private CartService cartService;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -132,6 +141,19 @@ public class ProductServiceImpl implements ProductService{
 
         Product savedProduct = productRepository.save(productFromDB);
 
+        //Updating Product price in corresponding Carts having the product
+        List<Cart> carts = cartRepository.findCartsByProductId(productId);
+        List<CartDTO> cartDTOs = carts.stream().map(cart->{
+                        CartDTO cartDTO = modelMapper.map(cart,CartDTO.class);
+                        List<ProductDTO> productDTOS = cart.getCartItems().stream()
+                                .map(p->modelMapper.map(p.getProduct(), ProductDTO.class))
+                                .toList();
+                        cartDTO.setProducts(productDTOS);
+                        return cartDTO;
+                    }).toList();
+
+        cartDTOs.forEach(cartDTO->cartService.updateProductInCarts(cartDTO.getCartId(),productId));
+
         return modelMapper.map(savedProduct,ProductDTO.class);
     }
 
@@ -140,6 +162,10 @@ public class ProductServiceImpl implements ProductService{
 
         Product productFromDB = productRepository.findById(productId)
                 .orElseThrow(()-> new ResourceNotFoundException("Product","ProductId",productId));
+
+        //deleting the product from all user carts
+        List<Cart> carts = cartRepository.findCartsByProductId(productId);
+        carts.forEach(cart->cartService.deleteProductFromCart(cart.getCartId(), productId));
 
         productRepository.delete(productFromDB);
 

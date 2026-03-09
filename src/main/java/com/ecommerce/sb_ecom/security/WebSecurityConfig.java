@@ -40,10 +40,8 @@ public class WebSecurityConfig {
     @Autowired
     private AuthEntryPoint unauthorizedHandler;
 
-    @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() {
-        return new AuthTokenFilter();
-    }
+    @Autowired
+    private AuthTokenFilter authTokenFilter ;
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
@@ -85,7 +83,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/images/**").permitAll()
                         .anyRequest().authenticated());
 
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
         http.authenticationProvider(authenticationProvider());
         return http.build();
     }
