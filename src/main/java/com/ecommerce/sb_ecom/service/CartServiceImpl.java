@@ -12,6 +12,7 @@ import com.ecommerce.sb_ecom.repositories.CartRepository;
 import com.ecommerce.sb_ecom.repositories.ProductRepository;
 import com.ecommerce.sb_ecom.util.AuthUtil;
 import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -151,12 +152,14 @@ public class CartServiceImpl implements CartService {
     @Override
     public CartDTO updateProductQuantityInCart(Long productId, Integer quantity) {
 
-        Cart userCart = cartRepository.findCartByEmail(authUtil.loggedInEmail());
-        Long cartId = userCart.getCartId();
+        String userEmail = authUtil.loggedInEmail();
+        Cart userCart = cartRepository.findCartByEmail(userEmail);
 
         if(userCart==null){
             throw new ResourceNotFoundException("Cart","cartId",userCart.getCartId());
         }
+
+        Long cartId = userCart.getCartId();
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(()-> new ResourceNotFoundException("Product","productId",productId));
@@ -176,26 +179,19 @@ public class CartServiceImpl implements CartService {
         }
 
         int newQuantity = cartItem.getQuantity()+quantity;
+
         if (newQuantity < 0) {
             throw new APIException("The resulting quantity cannot be negative.");
         }
 
-        if (newQuantity == 0){
-            deleteProductFromCart(cartId, productId);
-        }
-        else{
-            cartItem.setQuantity(cartItem.getQuantity() + quantity);
-            cartItem.setProductPrice(product.getSpecialPrice());
-            cartItem.setDiscount(product.getDiscount());
-            userCart.setTotalPrice(userCart.getTotalPrice() + (cartItem.getProductPrice() * quantity));
-            //cartRepository.save(userCart);
-        }
+        cartItem.setQuantity(cartItem.getQuantity() + quantity);
+        cartItem.setProductPrice(product.getSpecialPrice());
+        cartItem.setDiscount(product.getDiscount());
+        userCart.setTotalPrice(userCart.getTotalPrice() + (cartItem.getProductPrice() * quantity));
 
-        CartItem savedCartItem = cartItemRepository.save(cartItem);
-        if(savedCartItem.getQuantity() == 0){
-            cartItemRepository.deleteById(savedCartItem.getCartItemId());
+        if(newQuantity == 0){
+            deleteProductFromCart(cartId,productId);
         }
-
 
         CartDTO cartDTO = modelMapper.map(userCart,CartDTO.class);
         List<ProductDTO> productDTOList = userCart.getCartItems().stream()
@@ -217,17 +213,30 @@ public class CartServiceImpl implements CartService {
         Cart userCart = cartRepository.findById(cartId)
                 .orElseThrow(()-> new ResourceNotFoundException("Cart","cartId",cartId));
 
-
         CartItem cartItem = cartItemRepository.findCartItemByCartIdAndProductId(cartId,productId);
         if(cartItem==null){
-            throw new ResourceNotFoundException("Cart","cartId",cartId);
+            throw new ResourceNotFoundException("Product","productId",productId);
         }
 
         userCart.setTotalPrice(userCart.getTotalPrice() - (cartItem.getProductPrice() * cartItem.getQuantity()));
-
-        cartItemRepository.deleteCartItemByCartIdANDProductId(cartId, productId);
+        userCart.getCartItems().remove(cartItem);
+        cartItemRepository.deleteByCartIdAndProductId(cartId, productId);
 
         return "Product "+cartItem.getProduct().getProductName()+" has been removed from the Cart...";
+    }
+
+    @Transactional
+    @Override
+    public String deleteProductFromAllCarts(Long productId) {
+        List <CartItem> cartItems = cartItemRepository.findByProduct_ProductId(productId);
+
+        cartItems.forEach(cartItem -> {
+            Cart userCart = cartItem.getCart();
+            userCart.setTotalPrice(userCart.getTotalPrice() - (cartItem.getProductPrice() * cartItem.getQuantity()));
+            cartItemRepository.delete(cartItem);
+        });
+
+        return "Product "+cartItems.get(0).getProduct().getProductName()+" has been removed from all the Carts...";
     }
 
     @Override

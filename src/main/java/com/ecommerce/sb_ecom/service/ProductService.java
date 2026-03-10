@@ -2,6 +2,7 @@ package com.ecommerce.sb_ecom.service;
 
 import com.ecommerce.sb_ecom.payload.ProductDTO;
 import com.ecommerce.sb_ecom.payload.ProductResponse;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +17,7 @@ public interface ProductService {
     ProductResponse getAllProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder);
 
     ProductDTO updateProduct(Long productId, ProductDTO product);
+
 
     ProductDTO deleteProduct(Long productId);
 
